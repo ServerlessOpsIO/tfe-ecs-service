@@ -189,7 +189,7 @@ Resources:
       LaunchType: FARGATE
       EnableECSManagedTags: true
       PropagateTags: TASK_DEFINITION
-      EnableExecuteCommand: !Ref EnableExecuteCommand
+      EnableExecuteCommand: !Ref EnableContainerExec
       DeploymentConfiguration:
         MaximumPercent: 200
         MinimumHealthyPercent: 75
