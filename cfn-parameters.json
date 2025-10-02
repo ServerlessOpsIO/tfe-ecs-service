@@ -1,0 +1,19 @@
+{
+  "Domain": "development",
+  "System": "versant",
+  "Component": $env.GITHUB_REPOSITORY_NAME_PART_SLUG_CS,
+  "CodeBranch": $env.GITHUB_REF_SLUG_CS,
+  "ClusterName": "/development/versant/tfe-ecs-cluster/main/EcsClusterName",
+  "ClusterSecurityGroupId": "/development/versant/tfe-ecs-cluster/main/ContainerSecurityGroupId",
+  "ClusterAlbListenerArn": "/development/versant/tfe-ecs-cluster/main/EcsAlbListenerArn",
+  "ContainerImage": "images.releases.hashicorp.com/hashicorp/terraform-enterprise",
+  "ContainerTag": "v202507-1",
+  "ContainerCpu": "2048",
+  "ContainerMemory": "4096",
+  "ContainerDesiredCount": "1",
+  "EnableContainerExec": "false",
+  "DatadogApiKey": $secrets.DATADOG_API_KEY,"ContainerPort": "80","AlbRulePriority": "1",
+  "AlbRulePath": "*",
+  "VpcId": "/org/networking/VpcId",
+  "VpcSubnets": "/org/networking/VpcPublicSubnets"
+}

@@ -1,0 +1,310 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Versant tfe Service
+
+  Terraform Enterprise
+
+Parameters:
+  Domain:
+    Type: String
+    Description: 'Application Platform'
+
+  System:
+    Type: String
+    Description: 'Application System'
+
+  Component:
+    Type: String
+    Description: 'Application Component'
+
+  CodeBranch:
+    Type: String
+    Description: 'Name of deployment branch'
+
+  ClusterName:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: Name of ECS cluster
+
+
+  ClusterAlbListenerArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: Name of ECS cluster
+
+
+  ClusterSecurityGroupId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: ID of cluster security group
+
+
+
+  ContainerImage:
+    Type: String
+    Description: Container image
+
+  ContainerTag:
+    Type: String
+    Description: Container tag
+
+  ContainerCpu:
+    Type: Number
+    Description: Container CPU allocation units. 1024 is 1 CPU. Value may equal fraction of a CPU.
+
+  ContainerMemory:
+    Type: Number
+    Description: Container memory in megabytes
+
+  ContainerDesiredCount:
+    Type: Number
+    Description: How many copies of the service task to run
+
+  EnableContainerExec:
+    Type: String
+    Description: Enable ECS Exec for the container
+    AllowedValues:
+      - "true"
+      - "false"
+    Default: "false"
+
+
+  ContainerPort:
+    Type: Number
+    Description: Port container will listen on
+
+
+
+  AlbRulePriority:
+    Type: Number
+    Description: The priority for the routing rule added to the load balancer.
+
+  AlbRulePath:
+    Type: String
+    Description: A path on the public load balancer that this service
+      should be connected to. Use * to send all load balancer
+      traffic to this service.
+
+  VpcId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: Account VPC ID
+
+
+  VpcSubnets:
+    Type: AWS::SSM::Parameter::Value<CommaDelimitedList>
+    Description: Account subnets
+
+
+  DatadogApiKey:
+    Type: String
+    Description: Datadog API Key
+
+
+Conditions:
+  IsEnableContainerExec: !Equals [!Ref EnableContainerExec, "true"]
+
+Resources:
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      RuntimePlatform:
+        CpuArchitecture: X86_64
+        OperatingSystemFamily: LINUX
+      Family: !Sub ${Component}-${CodeBranch}
+      Cpu: !Ref ContainerCpu
+      Memory: !Ref ContainerMemory
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: !Ref ExecutionIamRole
+      TaskRoleArn: !Ref TaskIamRole
+      ContainerDefinitions:
+        - Name: !Ref Component
+          Image: !Sub '${ContainerImage}:${ContainerTag}'
+
+          PortMappings:
+            - ContainerPort: !Ref ContainerPort
+
+          # NOTE: Environment variables; often used for configuration
+          #Environment:
+          #  - Name: ENV_VARIABLE
+          #    Value: !Ref Parameter
+          # NOTE: Secrets from SSM Parameter Store or AWS Secrets Manager; like Environment but not
+          # exposed in console
+          #Secrets:
+          #  - Name: ENV_VARIABLE
+          #    ValueFrom: <ARN of SS secret or SSM parameter>
+          # NOTE: Define if not defined by container
+          #HealthCheck:
+          #  Command: ["CMD-SHELL", "<SOME_COMMAND> || exit 1"]
+          #  Interval: 30
+          #  Timeout: 5
+          #  Retries: 3
+          #  StartPeriod: 60
+          DockerLabels:
+            com.datadoghq.tags.domain: !Ref Domain
+            com.datadoghq.tags.system: !Ref System
+            com.datadoghq.tags.component: !Ref Component
+            com.datadoghq.tags.code_branch: !Ref CodeBranch
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-create-group: true
+              awslogs-group: !Sub '/aws/ecs/${ClusterName}/${AWS::StackName}'
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: app
+
+        - Name: datadog-agent
+          Cpu: 256
+          Memory: 512
+          Image: 'public.ecr.aws/datadog/agent:latest'
+          Environment:
+            - Name: DD_API_KEY
+              Value: !Ref DatadogApiKey
+            - Name: ECS_FARGATE
+              Value: true
+            - Name: DD_LOG_LEVEL
+              Value: ERROR
+          HealthCheck:
+            Command:
+              - CMD-SHELL
+              - 'agent health'
+            Interval: 5
+            Retries: 3
+            StartPeriod: 10
+            Timeout: 5
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-create-group: true
+              awslogs-group: !Sub '/aws/ecs/${ClusterName}/${AWS::StackName}/monitoring'
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: datadog
+
+
+  Service:
+    Type: AWS::ECS::Service
+    DependsOn: AlbListenerRule
+    Properties:
+      ServiceName: !Ref Component
+      Cluster: !Ref ClusterName
+      LaunchType: FARGATE
+      EnableECSManagedTags: true
+      PropagateTags: TASK_DEFINITION
+      EnableExecuteCommand: !Ref EnableExecuteCommand
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 75
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
+      DesiredCount: !Ref ContainerDesiredCount
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          SecurityGroups:
+            - !Ref ClusterSecurityGroupId
+          Subnets: !Ref VpcSubnets
+          AssignPublicIp: ENABLED   # Enabled because this runs in public subnet
+      TaskDefinition: !Ref TaskDefinition
+
+      LoadBalancers:
+        - ContainerName: !Ref Component
+          ContainerPort: !Ref ContainerPort
+          TargetGroupArn: !Ref AlbTargetGroup
+      HealthCheckGracePeriodSeconds: 60
+
+
+  # IAM Roles
+  # Governs permissions during task initialization
+  ExecutionIamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: ECRImage
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'ecr:GetAuthorizationToken'
+                  - 'ecr:BatchCheckLayerAvailability'
+                  - 'ecr:GetDownloadUrlForLayer'
+                  - 'ecr:BatchGetImage'
+                Resource: '*'
+        - PolicyName: CloudWatchLogs
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: '*'
+
+
+  # Governs permissions of running task container.
+  TaskIamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies: []
+
+  ContainerExecIamPolicy:
+    Type: AWS::IAM::Policy
+    Condition: IsEnableContainerExec
+    Properties:
+      PolicyName: AllowECSExec
+      Roles:
+        - !Ref TaskIamRole
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action:
+              - 'ssmmessages:CreateControlChannel'
+              - 'ssmmessages:CreateDataChannel'
+              - 'ssmmessages:OpenControlChannel'
+              - 'ssmmessages:OpenDataChannel'
+            Resource: '*'
+
+
+
+  # ALB
+  AlbTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 5
+      HealthCheckPath: /
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 4
+      HealthyThresholdCount: 2
+      TargetType: ip
+      Port: !Ref ContainerPort
+      Protocol: HTTP
+      UnhealthyThresholdCount: 2
+      VpcId: !Ref VpcId
+
+  AlbListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - TargetGroupArn: !Ref AlbTargetGroup
+          Type: forward
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - !Ref AlbRulePath
+      ListenerArn: !Ref ClusterAlbListenerArn
+      Priority: !Ref AlbRulePriority
+

@@ -1,0 +1,39 @@
+name: Branches
+
+on:
+  workflow_dispatch:
+  push:
+    branches-ignore:
+      - main
+
+jobs:
+  build_infra:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Setup job workspace
+        uses: ServerlessOpsIO/gha-setup-workspace@v1
+
+      - name: Assume AWS Credentials
+        uses: ServerlessOpsIO/gha-assume-aws-credentials@v1
+        with:
+          build_aws_account_id: ${{ secrets.AWS_CICD_ACCOUNT_ID }}
+
+      - name: Install AWS SAM
+        uses: aws-actions/setup-sam@v2
+
+
+      - name: Validate template
+        run: sam validate --lint
+
+      - name: Build artifact
+        run: sam build --parallel --template template.yaml
+
+      - name: Store Artifacts
+        uses: ServerlessOpsIO/gha-store-artifacts@v1
+        with:
+          use_aws_sam: true
+
