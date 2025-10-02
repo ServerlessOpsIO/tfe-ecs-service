@@ -7,7 +7,7 @@
   "ClusterSecurityGroupId": "/development/versant/tfe-ecs-cluster/main/ContainerSecurityGroupId",
   "ClusterAlbListenerArn": "/development/versant/tfe-ecs-cluster/main/EcsAlbListenerArn",
   "ContainerImage": "images.releases.hashicorp.com/hashicorp/terraform-enterprise",
-  "ContainerTag": "v202507-1",
+  "ContainerTag": "v202506-1",
   "ContainerCpu": "2048",
   "ContainerMemory": "4096",
   "ContainerDesiredCount": "1",
