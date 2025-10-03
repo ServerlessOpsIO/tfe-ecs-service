@@ -66,12 +66,9 @@ Parameters:
       - "false"
     Default: "false"
 
-
   ContainerPort:
     Type: Number
     Description: Port container will listen on
-
-
 
   AlbRulePriority:
     Type: Number
@@ -92,16 +89,37 @@ Parameters:
     Type: AWS::SSM::Parameter::Value<CommaDelimitedList>
     Description: Account subnets
 
-
   DatadogApiKey:
     Type: String
     Description: Datadog API Key
+
+  TfeDockerHubUsername:
+    Type: String
+    Description: TFE Docker Hub Username
+    Default: 'terraform'
+
+  TfeLicenseKey:
+    Type: String
+    Description: TFE License Key
+    NoEcho: true
 
 
 Conditions:
   IsEnableContainerExec: !Equals [!Ref EnableContainerExec, "true"]
 
 Resources:
+  TfeLicenseSecret:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Description: 'TFE License Key / Hashi Docker hub login'
+      SecretString: !Sub |
+        {
+          "username": "${TfeDockerHubUsername}",
+          "password": "${TfeLicenseKey}"
+        }
+
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -119,26 +137,10 @@ Resources:
       ContainerDefinitions:
         - Name: !Ref Component
           Image: !Sub '${ContainerImage}:${ContainerTag}'
-
+          RepositoryCredentials:
+            CredentialsParameter: !Ref TfeLicenseSecret
           PortMappings:
             - ContainerPort: !Ref ContainerPort
-
-          # NOTE: Environment variables; often used for configuration
-          #Environment:
-          #  - Name: ENV_VARIABLE
-          #    Value: !Ref Parameter
-          # NOTE: Secrets from SSM Parameter Store or AWS Secrets Manager; like Environment but not
-          # exposed in console
-          #Secrets:
-          #  - Name: ENV_VARIABLE
-          #    ValueFrom: <ARN of SS secret or SSM parameter>
-          # NOTE: Define if not defined by container
-          #HealthCheck:
-          #  Command: ["CMD-SHELL", "<SOME_COMMAND> || exit 1"]
-          #  Interval: 30
-          #  Timeout: 5
-          #  Retries: 3
-          #  StartPeriod: 60
           DockerLabels:
             com.datadoghq.tags.domain: !Ref Domain
             com.datadoghq.tags.system: !Ref System
@@ -245,6 +247,13 @@ Resources:
                   - 'logs:CreateLogStream'
                   - 'logs:PutLogEvents'
                 Resource: '*'
+        - PolicyName: SecretsManagerRead
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'secretsmanager:GetSecretValue'
+                Resource: !Ref TfeLicenseSecret
 
 
   # Governs permissions of running task container.

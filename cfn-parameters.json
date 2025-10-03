@@ -17,5 +17,6 @@
   "AlbRulePriority": "1",
   "AlbRulePath": "*",
   "VpcId": "/org/networking/VpcId",
-  "VpcSubnets": "/org/networking/VpcPublicSubnets"
+  "VpcSubnets": "/org/networking/VpcPublicSubnets",
+  "TfeLicenseKey": $secrets.TFE_LICENSE_KEY
 }
