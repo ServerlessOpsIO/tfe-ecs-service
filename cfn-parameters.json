@@ -18,5 +18,8 @@
   "AlbRulePath": "*",
   "VpcId": "/org/networking/VpcId",
   "VpcSubnets": "/org/networking/VpcPublicSubnets",
-  "TfeLicenseKey": $secrets.TFE_LICENSE_KEY
+  "TfeLicenseKey": $secrets.TFE_LICENSE_KEY,
+  "CacheEndpointAddress": "master.tfr17mqfixqpa988.n9qkdm.use1.cache.amazonaws.com",
+  "CachePort": "6379",
+  "CacheSecurityGroupId": "sg-02fc6f048b07e832d"
 }

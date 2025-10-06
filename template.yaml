@@ -26,17 +26,13 @@ Parameters:
     Type: AWS::SSM::Parameter::Value<String>
     Description: Name of ECS cluster
 
-
   ClusterAlbListenerArn:
     Type: AWS::SSM::Parameter::Value<String>
     Description: Name of ECS cluster
 
-
   ClusterSecurityGroupId:
     Type: AWS::SSM::Parameter::Value<String>
     Description: ID of cluster security group
-
-
 
   ContainerImage:
     Type: String
@@ -103,6 +99,18 @@ Parameters:
     Description: TFE License Key
     NoEcho: true
 
+  CacheSecurityGroupId:
+    Type: String
+    Description: Security group ID for cache access
+
+  CacheEndpointAddress:
+    Type: String
+    Description: Cache endpoint address
+
+  CachePort:
+    Type: String
+    Description: Cache port
+
 
 Conditions:
   IsEnableContainerExec: !Equals [!Ref EnableContainerExec, "true"]
@@ -139,6 +147,9 @@ Resources:
           Image: !Sub '${ContainerImage}:${ContainerTag}'
           RepositoryCredentials:
             CredentialsParameter: !Ref TfeLicenseSecret
+          Environment:
+            - Name: TFE_REDIS_HOST
+              Value: !Sub "${CacheEndpointAddress}:${CachePort}"
           PortMappings:
             - ContainerPort: !Ref ContainerPort
           DockerLabels:
@@ -184,7 +195,9 @@ Resources:
 
   Service:
     Type: AWS::ECS::Service
-    DependsOn: AlbListenerRule
+    DependsOn:
+      - AlbListenerRule
+      - CacheSecurityGroupIngress
     Properties:
       ServiceName: !Ref Component
       Cluster: !Ref ClusterName
@@ -317,3 +330,13 @@ Resources:
       ListenerArn: !Ref ClusterAlbListenerArn
       Priority: !Ref AlbRulePriority
 
+
+  # Cache access
+  CacheSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref CacheSecurityGroupId
+      SourceSecurityGroupId: !Ref ClusterSecurityGroupId
+      IpProtocol: tcp
+      FromPort: !Ref CachePort
+      ToPort: !Ref CachePort
