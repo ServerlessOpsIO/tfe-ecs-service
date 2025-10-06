@@ -150,6 +150,9 @@ Resources:
           Environment:
             - Name: TFE_REDIS_HOST
               Value: !Sub "${CacheEndpointAddress}:${CachePort}"
+          Secrets:
+            - Name: TFE_LICENSE
+              ValueFrom: !Sub "${TfeLicenseSecret}:password::"
           PortMappings:
             - ContainerPort: !Ref ContainerPort
           DockerLabels:
