@@ -20,15 +20,13 @@
   "TfeLicenseKey": $secrets.TFE_LICENSE_KEY,
   "CacheEndpointAddress": "master.tfr17mqfixqpa988.n9qkdm.use1.cache.amazonaws.com",
   "CachePort": "6379",
-  # FIXME: This could be an SSM param but need to figure out why domain and application name
-  # casing are different between ECS templates and RDS templates.
-  "CacheSecurityGroupId": "sg-02fc6f048b07e832d",
+  "CacheSecurityGroupId": "/development/versant/tfe-cache/main/CacheSecurityGroupId",
   "PgHost": "tfe-db-main-rdsdbcluster-lww8xekc5kzs.cluster-c8lik4owiq36.us-east-1.rds.amazonaws.com",
   "PgPort": "5432",
   "PgDatabaseUser": "postgres",
   "PgDatabasePassword": $secrets.PG_PASSWD,
   "PgDatabaseParameters": "sslmode=require",
   "DatabaseName": "terraform",
-  "RdsSecurityGroupId": "sg-0d655314920c3f70e",
+  "RdsSecurityGroupId": "/development/versant/tfe-db/main/RdsSecurityGroupId",
   "Hostname": "tfe.versant.serverlessops.io"
 }

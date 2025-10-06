@@ -100,7 +100,7 @@ Parameters:
     NoEcho: true
 
   RdsSecurityGroupId:
-    Type: String
+    Type: AWS::SSM::Parameter::Value<String>
     Description: Security group ID for RDS access
 
   PgHost:
@@ -129,7 +129,7 @@ Parameters:
     Description: Postgres database name
 
   CacheSecurityGroupId:
-    Type: String
+    Type: AWS::SSM::Parameter::Value<String>
     Description: Security group ID for cache access
 
   CacheEndpointAddress:
