@@ -172,6 +172,16 @@ Resources:
           "password": "${TfeLicenseKey}"
         }
 
+  TfeVaultPassword:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: RetainExceptOnCreate
+    UpdateReplacePolicy: Retain
+    Properties:
+      Description: Vault Password
+      GenerateSecretString:
+        PasswordLength: 64
+        ExcludePunctuation: true
+
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -218,9 +228,13 @@ Resources:
               Value: !Ref AWS::Region
             - Name: TFE_OBJECT_STORAGE_S3_USE_INSTANCE_PROFILE
               Value: true
+            - Name: TFE_VAULT_USE_EXTERNAL
+              Value: false
           Secrets:
             - Name: TFE_LICENSE
               ValueFrom: !Sub "${TfeLicenseSecret}:password::"
+            - Name: TFE_ENCRYPTION_PASSWORD
+              ValueFrom: !Ref TfeVaultPassword
           PortMappings:
             - ContainerPort: !Ref ContainerPort
           DockerLabels:
@@ -337,7 +351,9 @@ Resources:
               - Effect: Allow
                 Action:
                   - 'secretsmanager:GetSecretValue'
-                Resource: !Ref TfeLicenseSecret
+                Resource:
+                  - !Ref TfeLicenseSecret
+                  - !Ref TfeVaultPassword
 
 
   # Governs permissions of running task container.
