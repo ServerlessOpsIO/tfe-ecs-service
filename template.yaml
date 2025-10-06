@@ -162,7 +162,7 @@ Resources:
 
   TfeLicenseSecret:
     Type: AWS::SecretsManager::Secret
-    DeletionPolicy: Retain
+    DeletionPolicy: RetainExceptOnCreate
     UpdateReplacePolicy: Retain
     Properties:
       Description: 'TFE License Key / Hashi Docker hub login'
