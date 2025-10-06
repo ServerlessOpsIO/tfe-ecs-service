@@ -20,6 +20,8 @@
   "TfeLicenseKey": $secrets.TFE_LICENSE_KEY,
   "CacheEndpointAddress": "master.tfr17mqfixqpa988.n9qkdm.use1.cache.amazonaws.com",
   "CachePort": "6379",
+  # FIXME: This could be an SSM param but need to figure out why domain and application name
+  # casing are different between ECS templates and RDS templates.
   "CacheSecurityGroupId": "sg-02fc6f048b07e832d",
   "PgHost": "tfe-db-main-rdsdbcluster-lww8xekc5kzs.cluster-c8lik4owiq36.us-east-1.rds.amazonaws.com",
   "PgPort": "5432",

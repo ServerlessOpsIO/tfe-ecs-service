@@ -149,6 +149,17 @@ Conditions:
   IsEnableContainerExec: !Equals [!Ref EnableContainerExec, "true"]
 
 Resources:
+  TfeObjectStorageBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: RetainExceptOnCreate
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: alias/aws/s3
+
   TfeLicenseSecret:
     Type: AWS::SecretsManager::Secret
     DeletionPolicy: Retain
@@ -199,6 +210,14 @@ Resources:
               Value: "true"
             - Name: TFE_REDIS_HOST
               Value: !Sub "${CacheEndpointAddress}:${CachePort}"
+            - Name: TFE_OBJECT_STORAGE_TYPE
+              Value: s3
+            - Name: TFE_OBJECT_STORAGE_S3_BUCKET
+              Value: !Ref TfeObjectStorageBucket
+            - Name: TFE_OBJECT_STORAGE_S3_REGION
+              Value: !Ref AWS::Region
+            - Name: TFE_OBJECT_STORAGE_S3_USE_INSTANCE_PROFILE
+              Value: true
           Secrets:
             - Name: TFE_LICENSE
               ValueFrom: !Sub "${TfeLicenseSecret}:password::"
@@ -333,7 +352,22 @@ Resources:
             Action:
               - sts:AssumeRole
       Path: /
-      Policies: []
+      Policies:
+        - PolicyName: S3AccessPolicy
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "s3:ListBucket"
+                Resource:
+                  - !GetAtt TfeObjectStorageBucket.Arn
+              - Effect: Allow
+                Action:
+                  - "s3:GetObject"
+                  - "s3:PutObject"
+                  - "s3:DeleteObject"
+                Resource:
+                  - !Sub '${TfeObjectStorageBucket.Arn}/*'
 
   ContainerExecIamPolicy:
     Type: AWS::IAM::Policy
