@@ -230,6 +230,8 @@ Resources:
               Value: true
             - Name: TFE_VAULT_USE_EXTERNAL
               Value: false
+            - Name: TFE_REDIS_USE_TLS
+              Value: true
           Secrets:
             - Name: TFE_LICENSE
               ValueFrom: !Sub "${TfeLicenseSecret}:password::"
