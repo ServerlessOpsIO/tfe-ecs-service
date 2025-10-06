@@ -140,6 +140,10 @@ Parameters:
     Type: String
     Description: Cache port
 
+  Hostname:
+    Type: String
+    Description: Site FQDN
+
 
 Conditions:
   IsEnableContainerExec: !Equals [!Ref EnableContainerExec, "true"]
@@ -177,6 +181,10 @@ Resources:
           RepositoryCredentials:
             CredentialsParameter: !Ref TfeLicenseSecret
           Environment:
+            - Name: TFE_HOSTNAME
+              Value: !Ref Hostname
+            - Name: TFE_OPERATIONAL_MODE
+              Value: "active-active"
             - Name: TFE_DATABASE_HOST
               Value: !Sub "${PgHost}:${PgPort}"
             - Name: TFE_DATABASE_NAME

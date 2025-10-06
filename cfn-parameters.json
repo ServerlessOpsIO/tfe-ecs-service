@@ -28,5 +28,6 @@
   "PgDatabasePassword": $secrets.PG_PASSWD,
   "PgDatabaseParameters": "sslmode=require",
   "DatabaseName": "terraform",
-  "RdsSecurityGroupId": "sg-0d655314920c3f70e"
+  "RdsSecurityGroupId": "sg-0d655314920c3f70e",
+  "Hostname": "tfe.versant.serverlessops.io"
 }
