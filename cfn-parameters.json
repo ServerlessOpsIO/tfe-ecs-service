@@ -12,7 +12,6 @@
   "ContainerMemory": "4096",
   "ContainerDesiredCount": "1",
   "EnableContainerExec": "false",
-  "DatadogApiKey": $secrets.DATADOG_API_KEY,
   "ContainerPort": "80",
   "AlbRulePriority": "1",
   "AlbRulePath": "*",
