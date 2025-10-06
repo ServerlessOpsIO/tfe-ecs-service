@@ -99,6 +99,35 @@ Parameters:
     Description: TFE License Key
     NoEcho: true
 
+  RdsSecurityGroupId:
+    Type: String
+    Description: Security group ID for RDS access
+
+  PgHost:
+    Type: String
+    Description: Postgres host
+
+  PgPort:
+    Type: Number
+    Description: Postgres port
+
+  PgDatabaseUser:
+    Type: String
+    Description: Postgres database user
+
+  PgDatabasePassword:
+    Type: String
+    Description: Postgres database password
+    NoEcho: true
+
+  PgDatabaseParameters:
+    Type: String
+    Description: Postgres database connection parameters
+
+  DatabaseName:
+    Type: String
+    Description: Postgres database name
+
   CacheSecurityGroupId:
     Type: String
     Description: Security group ID for cache access
@@ -148,6 +177,18 @@ Resources:
           RepositoryCredentials:
             CredentialsParameter: !Ref TfeLicenseSecret
           Environment:
+            - Name: TFE_DATABASE_HOST
+              Value: !Sub "${PgHost}:${PgPort}"
+            - Name: TFE_DATABASE_NAME
+              Value: !Ref DatabaseName
+            - Name: TFE_DATABASE_USER
+              Value: !Ref PgDatabaseUser
+            - Name: TFE_DATABASE_PASSWORD
+              Value: !Ref PgDatabasePassword
+            - Name: TFE_DATABASE_PARAMETERS
+              Value: !Ref PgDatabaseParameters
+            - Name: TFE_DATABASE_MONITOR_ENABLED
+              Value: "true"
             - Name: TFE_REDIS_HOST
               Value: !Sub "${CacheEndpointAddress}:${CachePort}"
           Secrets:
@@ -201,6 +242,7 @@ Resources:
     DependsOn:
       - AlbListenerRule
       - CacheSecurityGroupIngress
+      - RdsSgIngressRule
     Properties:
       ServiceName: !Ref Component
       Cluster: !Ref ClusterName
@@ -343,3 +385,13 @@ Resources:
       IpProtocol: tcp
       FromPort: !Ref CachePort
       ToPort: !Ref CachePort
+
+  # DB access
+  RdsSgIngressRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref RdsSecurityGroupId
+      IpProtocol: tcp
+      FromPort: !Ref PgPort
+      ToPort: !Ref PgPort
+      SourceSecurityGroupId: !Ref ClusterSecurityGroupId

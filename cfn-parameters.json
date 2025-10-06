@@ -21,5 +21,12 @@
   "TfeLicenseKey": $secrets.TFE_LICENSE_KEY,
   "CacheEndpointAddress": "master.tfr17mqfixqpa988.n9qkdm.use1.cache.amazonaws.com",
   "CachePort": "6379",
-  "CacheSecurityGroupId": "sg-02fc6f048b07e832d"
+  "CacheSecurityGroupId": "sg-02fc6f048b07e832d",
+  "PgHost": "tfe-db-main-rdsdbcluster-lww8xekc5kzs.cluster-c8lik4owiq36.us-east-1.rds.amazonaws.com",
+  "PgPort": "5432",
+  "PgDatabaseUser": "postgres",
+  "PgDatabasePassword": $secrets.PG_PASSWD,
+  "PgDatabaseParameters": "sslmode=require",
+  "DatabaseName": "terraform",
+  "RdsSecurityGroupId": "sg-0d655314920c3f70e"
 }
