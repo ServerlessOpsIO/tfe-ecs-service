@@ -28,5 +28,6 @@
   "PgDatabaseParameters": "sslmode=require",
   "DatabaseName": "terraform",
   "RdsSecurityGroupId": "/development/versant/tfe-db/main/RdsSecurityGroupId",
-  "Hostname": "tfe.versant.serverlessops.io"
+  "Hostname": "tfe.versant.serverlessops.io",
+  "TlsCertArn": $secrets.TFE_TLS_CERT_ARN
 }

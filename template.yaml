@@ -144,6 +144,10 @@ Parameters:
     Type: String
     Description: Site FQDN
 
+  TlsCertArn:
+    Type: String
+    Description: ARN of ACM cert
+
 
 Conditions:
   IsEnableContainerExec: !Equals [!Ref EnableContainerExec, "true"]
@@ -196,11 +200,20 @@ Resources:
         - FARGATE
       ExecutionRoleArn: !Ref ExecutionIamRole
       TaskRoleArn: !Ref TaskIamRole
+      Volumes:
+        - Name: certs
       ContainerDefinitions:
         - Name: !Ref Component
           Image: !Sub '${ContainerImage}:${ContainerTag}'
           RepositoryCredentials:
             CredentialsParameter: !Ref TfeLicenseSecret
+          DependsOn:
+            - ContainerName: CertFetch
+              Condition: COMPLETE
+          MountPoints:
+            - ContainerPath: /mnt
+              SourceVolume: certs
+              ReadOnly: false
           Environment:
             - Name: TFE_HOSTNAME
               Value: !Ref Hostname
@@ -232,6 +245,10 @@ Resources:
               Value: false
             - Name: TFE_REDIS_USE_TLS
               Value: true
+            - Name: TFE_TLS_CERT_FILE
+              Value: /mnt/cert.pem
+            - Name: TFE_TLS_KEY_FILE
+              Value: /mnt/key.pem
           Secrets:
             - Name: TFE_LICENSE
               ValueFrom: !Sub "${TfeLicenseSecret}:password::"
@@ -251,6 +268,25 @@ Resources:
               awslogs-group: !Sub '/aws/ecs/${ClusterName}/${AWS::StackName}'
               awslogs-region: !Ref AWS::Region
               awslogs-stream-prefix: app
+        - Name: CertFetch
+          Essential: false
+          Image: 225989329251.dkr.ecr.us-east-1.amazonaws.com/serverlessopsio/aws-cli-container:latest
+          Cpu: 256
+          Memory: 512
+          EntryPoint:
+            - /bin/sh
+            - -c
+          Command:
+            - !Sub |
+                echo -n "foobar" | aws acm export-certificate --certificate-arn  "${TlsCertArn}" --passphrase fileb:///dev/stdin > /mnt/tls.json
+                jq -r '.Certificate' /mnt/tls.json > /mnt/cert.pem
+                jq -r '.CertificateChain' /mnt/tls.json >> /mnt/cert.pem
+                jq -r '.PrivateKey' /mnt/tls.json > /mnt/key-encrypted.pem
+                openssl rsa -in /mnt/key-encrypted.pem -out /mnt/key.pem -passin pass:foobar
+          MountPoints:
+            - ContainerPath: /mnt
+              SourceVolume: certs
+              ReadOnly: false
 #        - Name: datadog-agent
 #          Cpu: 256
 #          Memory: 512
