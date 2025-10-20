@@ -279,14 +279,25 @@ Resources:
           Command:
             - !Sub |
                 echo -n "foobar" | aws acm export-certificate --certificate-arn  "${TlsCertArn}" --passphrase fileb:///dev/stdin > /mnt/tls.json
+                cat /mnt/tls.json
                 jq -r '.Certificate' /mnt/tls.json > /mnt/cert.pem
                 jq -r '.CertificateChain' /mnt/tls.json >> /mnt/cert.pem
+                cat /mnt/cert.pem
                 jq -r '.PrivateKey' /mnt/tls.json > /mnt/key-encrypted.pem
+                cat /mnt/key-encrypted.pem
                 openssl rsa -in /mnt/key-encrypted.pem -out /mnt/key.pem -passin pass:foobar
+                cat /mnt/key.pem
           MountPoints:
             - ContainerPath: /mnt
               SourceVolume: certs
               ReadOnly: false
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-create-group: true
+              awslogs-group: !Sub '/aws/ecs/${ClusterName}/${AWS::StackName}'
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: cert
 #        - Name: datadog-agent
 #          Cpu: 256
 #          Memory: 512
