@@ -104,7 +104,7 @@ Parameters:
     Description: Security group ID for RDS access
 
   PgHost:
-    Type: String
+    Type: AWS::SSM::Parameter::Value<String>
     Description: Postgres host
 
   PgPort:
@@ -133,7 +133,7 @@ Parameters:
     Description: Security group ID for cache access
 
   CacheEndpointAddress:
-    Type: String
+    Type: AWS::SSM::Parameter::Value<String>
     Description: Cache endpoint address
 
   CachePort:
