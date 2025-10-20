@@ -30,9 +30,9 @@ Parameters:
     Type: AWS::SSM::Parameter::Value<String>
     Description: Name of ECS cluster
 
-  ClusterSecurityGroupId:
-    Type: AWS::SSM::Parameter::Value<String>
-    Description: ID of cluster security group
+  ClusterAlbSecurityGroupId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::SecurityGroup::Id>
+    Description: ID of cluster ALB security group
 
   ContainerImage:
     Type: String
@@ -338,7 +338,7 @@ Resources:
       NetworkConfiguration:
         AwsvpcConfiguration:
           SecurityGroups:
-            - !Ref ClusterSecurityGroupId
+            - !Ref ServiceSecurityGroup
           Subnets: !Ref VpcSubnets
           AssignPublicIp: ENABLED   # Enabled because this runs in public subnet
       TaskDefinition: !Ref TaskDefinition
@@ -441,8 +441,25 @@ Resources:
             Resource: '*'
 
 
+  # Security Group
+  ServiceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ECS Service SG
+      VpcId: !Ref VpcId
 
   # ALB
+  ServiceSecurityGroupAlbIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Ingress from ALBs
+      GroupId: !Ref ServiceSecurityGroup
+      # All TCP ports
+      IpProtocol: tcp
+      FromPort: !Ref ContainerPort
+      ToPort: !Ref ContainerPort
+      SourceSecurityGroupId: !Ref ClusterAlbSecurityGroupId
+
   AlbTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -476,7 +493,7 @@ Resources:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !Ref CacheSecurityGroupId
-      SourceSecurityGroupId: !Ref ClusterSecurityGroupId
+      SourceSecurityGroupId: !Ref ServiceSecurityGroup
       IpProtocol: tcp
       FromPort: !Ref CachePort
       ToPort: !Ref CachePort
@@ -489,4 +506,12 @@ Resources:
       IpProtocol: tcp
       FromPort: !Ref PgPort
       ToPort: !Ref PgPort
-      SourceSecurityGroupId: !Ref ClusterSecurityGroupId
+      SourceSecurityGroupId: !Ref ServiceSecurityGroup
+
+  ServiceSecurityGroupIdSsmParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Type: String
+      Description: Name of ECS Cluster
+      Name: !Sub /${Domain}/${System}/${Component}/${CodeBranch}/ServiceSecurityGroupId
+      Value: !Ref ServiceSecurityGroup
